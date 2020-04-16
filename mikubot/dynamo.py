@@ -40,8 +40,7 @@ class Dynamo:
         table = self._dynamodb.Table(tableName)
         response = table.put_item(Item=attributes)
 
-        print("PutItem succeeded:")
-        print(json.dumps(response, indent=4, cls=DecimalEncoder))
+        print("successfully put item in ", tableName)
 
     def readItem(self, tableName, key):
         """Return a dictionary that contains the result of this query"""
@@ -53,7 +52,6 @@ class Dynamo:
             print(e.response['Error']['Message'])
             return {}
         except KeyError as e:
-            print('no item present in response')
             return {}
 
     def queryItems(self, tableName, keyConditionExpression):

@@ -97,8 +97,6 @@ class MikuBot:
             if len(kv) == 2:
                 tags[kv[0]] = kv[1]
 
-        print(tags)
-
         return PrivMsg(user, message, tags, channel)
 
 
