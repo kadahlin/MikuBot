@@ -38,9 +38,7 @@ class Dynamo:
 
     def putItem(self, tableName, attributes):
         table = self._dynamodb.Table(tableName)
-        response = table.put_item(
-            Item=attributes
-        )
+        response = table.put_item(Item=attributes)
 
         print("PutItem succeeded:")
         print(json.dumps(response, indent=4, cls=DecimalEncoder))
@@ -50,11 +48,19 @@ class Dynamo:
         table = self._dynamodb.Table(tableName)
         try:
             response = table.get_item(Key=key)
+            return response['Item']
         except ClientError as e:
             print(e.response['Error']['Message'])
             return {}
-        else:
-            return response['Item']
+        except KeyError as e:
+            print('no item present in response')
+            return {}
+
+    def queryItems(self, tableName, keyConditionExpression):
+        table = self._dynamodb.Table(tableName)
+
+        response = table.query(KeyConditionExpression=keyConditionExpression)
+        return response['Items']
 
     def removeItem(self, tableName, key):
         table = self._dynamodb.Table(tableName)

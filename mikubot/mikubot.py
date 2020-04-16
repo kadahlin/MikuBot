@@ -9,7 +9,8 @@ from chat_handlers.autoreplies import AutoReplies
 
 command_marker = '!'
 dynamo = ''
-if('debug' in sys.argv):
+isDebug = 'debug' in sys.argv
+if isDebug:
     dynamo = Dynamo(boto3.resource(
         'dynamodb', endpoint_url="http://localhost:8000"))
 else:
@@ -36,6 +37,7 @@ class MikuBot:
 
         self._sendCommand(s, "PASS {0}".format(password))
         self._sendCommand(s, "NICK {0}".format(nick))
+        self._sendCommand(s, "CAP REQ :twitch.tv/tags")
         self._sendCommand(s, "JOIN #{0}".format('burnt898'))
         self._sendCommand(s, "JOIN #{0}".format('kylesgamingemporium'))
 
@@ -45,6 +47,9 @@ class MikuBot:
                 print('sending pong')
                 self._sendCommand(s, 'PONG :tmi.twitch.tv')
 
+            if isDebug:
+                print(buffer)
+
             pieces = buffer.split()
 
             if len(pieces) >= 3:
@@ -53,17 +58,17 @@ class MikuBot:
                     print('joining {}'.format(channelName))
                     self.channels[channelName] = Channel(channelName, s)
 
-                if pieces[1] == 'PRIVMSG':
+                if pieces[2] == 'PRIVMSG':
                     priv_msg = self._getPrivMsgInfo(buffer)
                     try:
-                        channel = self.channels[priv_msg.channel]
-                        print('handling for {}'.format(channel))
-                        for handler in self.handlers:
-                            handler.handleMessage(
-                                priv_msg.message, priv_msg.user, channel)
+                        channel = self.channels[priv_msg.channelName]
                     except KeyError as e:
                         print('can not send a message to {} as we are not joined'.format(
-                            priv_msg.channel))
+                            priv_msg.channelName))
+                    else:
+                        for handler in self.handlers:
+                            handler.handleMessage(
+                                priv_msg.message, priv_msg.user, priv_msg.tags, channel)
 
     def _sendCommand(self, socket, command):
         socket.sendall("{0}\n".format(command).encode())
@@ -74,16 +79,27 @@ class MikuBot:
 
         https://dev.twitch.tv/docs/irc/guide#command--message-limits
         """
-        PrivMsg = namedtuple('PrivMsg', 'user message channel')
+        PrivMsg = namedtuple('PrivMsg', 'user message tags channelName')
         pieces = full_message.split()
-        channel = pieces[2][1:]
+        channel = pieces[3][1:]
 
-        user = 'some user'
+        first_colon_index = full_message.find(':')
+        first_bang_index = full_message.find('!')
 
-        colon_index = full_message.rfind(':')
-        message = full_message[colon_index + 1:]
+        user = full_message[first_colon_index:first_bang_index]
 
-        return PrivMsg(user, message, channel)
+        last_colon_index = full_message.rfind(':')
+        message = full_message[last_colon_index + 1:]
+
+        tags = {}
+        for tag_pair in pieces[0][1:].split(';'):
+            kv = tag_pair.split('=')
+            if len(kv) == 2:
+                tags[kv[0]] = kv[1]
+
+        print(tags)
+
+        return PrivMsg(user, message, tags, channel)
 
 
 if __name__ == '__main__':
