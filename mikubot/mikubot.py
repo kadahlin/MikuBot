@@ -1,11 +1,19 @@
 import os
 import socket
+import boto3
+import sys
 from channel import Channel
+from dynamo import Dynamo
 from collections import namedtuple
-from chat_handlers import discord_linker
-from chat_handlers import valorant_classes
+from chat_handlers.autoreplies import AutoReplies
 
 command_marker = '!'
+dynamo = ''
+if('debug' in sys.argv):
+    dynamo = Dynamo(boto3.resource(
+        'dynamodb', endpoint_url="http://localhost:8000"))
+else:
+    dynamo = Dynamo(boto3.resource('dynamodb', region_name='us-west-2'))
 
 
 class MikuBot:
@@ -16,7 +24,7 @@ class MikuBot:
     and hold all channel objects
     """
 
-    handlers = [discord_linker.handler, valorant_classes.handler]
+    handlers = [AutoReplies(dynamo)]
     channels = {}
 
     def start(self):
@@ -51,7 +59,8 @@ class MikuBot:
                         channel = self.channels[priv_msg.channel]
                         print('handling for {}'.format(channel))
                         for handler in self.handlers:
-                            handler(priv_msg.message, priv_msg.user, channel)
+                            handler.handleMessage(
+                                priv_msg.message, priv_msg.user, channel)
                     except KeyError as e:
                         print('can not send a message to {} as we are not joined'.format(
                             priv_msg.channel))
