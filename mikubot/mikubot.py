@@ -3,6 +3,7 @@ import socket
 from channel import Channel
 from collections import namedtuple
 from chat_handlers import discord_linker
+from chat_handlers import valorant_classes
 
 command_marker = '!'
 
@@ -15,7 +16,7 @@ class MikuBot:
     and hold all channel objects
     """
 
-    handlers = [discord_linker.handler]
+    handlers = [discord_linker.handler, valorant_classes.handler]
     channels = {}
 
     def start(self):
